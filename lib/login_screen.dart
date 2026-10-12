@@ -24,7 +24,6 @@ class _LoginScreenState extends State<LoginScreen>
   late Animation<double> _fadeAnim;
   late Animation<Offset> _slideAnim;
 
-  // Tài khoản & Mật khẩu chỉ định
   static const String correctEmail = 'phuonguyen';
   static const String correctPassword = '31042006';
 
@@ -35,17 +34,11 @@ class _LoginScreenState extends State<LoginScreen>
       vsync: this,
       duration: const Duration(milliseconds: 900),
     );
-    _fadeAnim = CurvedAnimation(
-      parent: _animController,
-      curve: Curves.easeOut,
-    );
-    _slideAnim = Tween<Offset>(
-      begin: const Offset(0, 0.1),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animController,
-      curve: Curves.easeOutCubic,
-    ));
+    _fadeAnim = CurvedAnimation(parent: _animController, curve: Curves.easeOut);
+    _slideAnim = Tween<Offset>(begin: const Offset(0, 0.1), end: Offset.zero)
+        .animate(
+          CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic),
+        );
 
     _animController.forward();
     _loadSavedLogin();
@@ -91,7 +84,6 @@ class _LoginScreenState extends State<LoginScreen>
     setState(() => _isLoading = true);
     await Future.delayed(const Duration(milliseconds: 500));
 
-    // Bắt buộc đúng Email: phuonguyen và Pass: 31042006 mới cho vào
     final isEmailValid =
         (inputUser == correctEmail || inputUser == '$correctEmail@gmail.com');
     final isPassValid = (inputPass == correctPassword);
@@ -136,7 +128,6 @@ class _LoginScreenState extends State<LoginScreen>
     return Scaffold(
       body: Stack(
         children: [
-          // Nền gradient sang trọng 20/10
           Container(
             width: double.infinity,
             height: double.infinity,
@@ -153,7 +144,6 @@ class _LoginScreenState extends State<LoginScreen>
             ),
           ),
 
-          // Vòng tròn trang trí mờ phía sau
           Positioned(
             top: -60,
             right: -60,
@@ -182,7 +172,10 @@ class _LoginScreenState extends State<LoginScreen>
           SafeArea(
             child: Center(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 16,
+                ),
                 child: FadeTransition(
                   opacity: _fadeAnim,
                   child: SlideTransition(
@@ -215,7 +208,6 @@ class _LoginScreenState extends State<LoginScreen>
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            // Icon trái tim / quà tặng 20/10
                             Container(
                               width: 76,
                               height: 76,
@@ -229,7 +221,9 @@ class _LoginScreenState extends State<LoginScreen>
                                 ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.pinkAccent.withValues(alpha: 0.35),
+                                    color: Colors.pinkAccent.withValues(
+                                      alpha: 0.35,
+                                    ),
                                     blurRadius: 16,
                                     offset: const Offset(0, 6),
                                   ),
@@ -243,7 +237,6 @@ class _LoginScreenState extends State<LoginScreen>
                             ),
                             const SizedBox(height: 18),
 
-                            // Tiêu đề ứng dụng
                             const Text(
                               'phương uyên',
                               style: TextStyle(
@@ -268,17 +261,24 @@ class _LoginScreenState extends State<LoginScreen>
                             if (_errorMessage != null) ...[
                               Container(
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 14, vertical: 10),
+                                  horizontal: 14,
+                                  vertical: 10,
+                                ),
                                 decoration: BoxDecoration(
                                   color: Colors.red.shade50,
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
-                                      color: Colors.red.shade200, width: 1),
+                                    color: Colors.red.shade200,
+                                    width: 1,
+                                  ),
                                 ),
                                 child: Row(
                                   children: [
-                                    Icon(Icons.error_outline,
-                                        color: Colors.red.shade700, size: 20),
+                                    Icon(
+                                      Icons.error_outline,
+                                      color: Colors.red.shade700,
+                                      size: 20,
+                                    ),
                                     const SizedBox(width: 8),
                                     Expanded(
                                       child: Text(
@@ -295,7 +295,6 @@ class _LoginScreenState extends State<LoginScreen>
                               const SizedBox(height: 16),
                             ],
 
-                            // Trường Email / Tài khoản
                             TextFormField(
                               controller: _usernameController,
                               keyboardType: TextInputType.emailAddress,
@@ -303,8 +302,10 @@ class _LoginScreenState extends State<LoginScreen>
                               decoration: InputDecoration(
                                 labelText: 'Email / Tài khoản',
                                 hintText: 'Nhập email hoặc tên tài khoản',
-                                prefixIcon: const Icon(Icons.alternate_email_rounded,
-                                    color: Color(0xFF9370DB)),
+                                prefixIcon: const Icon(
+                                  Icons.alternate_email_rounded,
+                                  color: Color(0xFF9370DB),
+                                ),
                                 filled: true,
                                 fillColor: const Color(0xFFF9F6FC),
                                 border: OutlineInputBorder(
@@ -328,7 +329,6 @@ class _LoginScreenState extends State<LoginScreen>
                             ),
                             const SizedBox(height: 16),
 
-                            // Trường Mật khẩu
                             TextFormField(
                               controller: _passwordController,
                               obscureText: _obscurePassword,
@@ -337,8 +337,10 @@ class _LoginScreenState extends State<LoginScreen>
                               decoration: InputDecoration(
                                 labelText: 'Mật khẩu',
                                 hintText: 'Nhập mật khẩu',
-                                prefixIcon: const Icon(Icons.lock_outline,
-                                    color: Color(0xFF9370DB)),
+                                prefixIcon: const Icon(
+                                  Icons.lock_outline,
+                                  color: Color(0xFF9370DB),
+                                ),
                                 suffixIcon: IconButton(
                                   icon: Icon(
                                     _obscurePassword
@@ -375,7 +377,6 @@ class _LoginScreenState extends State<LoginScreen>
                             ),
                             const SizedBox(height: 10),
 
-                            // Ghi nhớ đăng nhập
                             Row(
                               children: [
                                 SizedBox(
@@ -404,7 +405,6 @@ class _LoginScreenState extends State<LoginScreen>
                             ),
                             const SizedBox(height: 22),
 
-                            // Nút Đăng nhập
                             SizedBox(
                               width: double.infinity,
                               height: 52,
@@ -419,8 +419,9 @@ class _LoginScreenState extends State<LoginScreen>
                                   borderRadius: BorderRadius.circular(18),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: const Color(0xFFFF69B4)
-                                          .withValues(alpha: 0.4),
+                                      color: const Color(
+                                        0xFFFF69B4,
+                                      ).withValues(alpha: 0.4),
                                       blurRadius: 16,
                                       offset: const Offset(0, 6),
                                     ),
@@ -443,7 +444,8 @@ class _LoginScreenState extends State<LoginScreen>
                                             strokeWidth: 2.5,
                                             valueColor:
                                                 AlwaysStoppedAnimation<Color>(
-                                                    Colors.white),
+                                                  Colors.white,
+                                                ),
                                           ),
                                         )
                                       : const Row(

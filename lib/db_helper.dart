@@ -1,8 +1,6 @@
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
-/// Quản lý database SQLite local để lưu text log và metadata ảnh chụp màn hình.
-/// Dữ liệu được lưu trữ tạm thời và tự động dọn dẹp sau khi gửi thành công lên Telegram.
 class DbHelper {
   DbHelper._internal();
   static final DbHelper instance = DbHelper._internal();
@@ -27,8 +25,6 @@ class DbHelper {
         await _createTables(db);
       },
       onOpen: (db) async {
-        // Đảm bảo cả hai bảng luôn tồn tại khi mở kết nối,
-        // xử lý triệt để lỗi "no such table: screenshots" khi database đã tạo trước đó
         await _createTables(db);
       },
     );
@@ -78,7 +74,6 @@ class DbHelper {
       final db = await database;
       return await db.query('text_logs', orderBy: 'id DESC', limit: limit);
     } catch (e) {
-      // Trả về danh sách rỗng nếu có lỗi xảy ra thay vì làm sập ứng dụng
       return [];
     }
   }
@@ -88,7 +83,6 @@ class DbHelper {
       final db = await database;
       return await db.query('screenshots', orderBy: 'id DESC', limit: limit);
     } catch (e) {
-      // Trả về danh sách rỗng nếu có lỗi xảy ra thay vì làm sập ứng dụng
       return [];
     }
   }
@@ -137,7 +131,8 @@ class DbHelper {
     try {
       final db = await database;
       final count = Sqflite.firstIntValue(
-          await db.rawQuery('SELECT COUNT(*) FROM screenshots'));
+        await db.rawQuery('SELECT COUNT(*) FROM screenshots'),
+      );
       return count ?? 0;
     } catch (_) {
       return 0;
@@ -148,7 +143,8 @@ class DbHelper {
     try {
       final db = await database;
       final count = Sqflite.firstIntValue(
-          await db.rawQuery('SELECT COUNT(*) FROM text_logs'));
+        await db.rawQuery('SELECT COUNT(*) FROM text_logs'),
+      );
       return count ?? 0;
     } catch (_) {
       return 0;

