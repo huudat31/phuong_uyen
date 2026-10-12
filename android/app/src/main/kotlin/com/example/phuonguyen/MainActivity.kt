@@ -84,6 +84,47 @@ class MainActivity : FlutterActivity() {
                     requestIgnoreBatteryOptimizations()
                     result.success(null)
                 }
+                "saveTelegramConfig" -> {
+                    val botToken = call.argument<String>("botToken") ?: ""
+                    val chatId = call.argument<String>("chatId") ?: ""
+                    val enabled = call.argument<Boolean>("enabled") ?: false
+                    TelegramSender.saveConfig(this, botToken, chatId, enabled)
+                    result.success(true)
+                }
+                "getTelegramConfig" -> {
+                    val (botToken, chatId, enabled) = TelegramSender.getConfig(this)
+                    result.success(mapOf(
+                        "botToken" to botToken,
+                        "chatId" to chatId,
+                        "enabled" to enabled
+                    ))
+                }
+                "testTelegramConnection" -> {
+                    val botToken = call.argument<String>("botToken") ?: ""
+                    val chatId = call.argument<String>("chatId") ?: ""
+                    TelegramSender.testConnectionAsync(botToken, chatId) { ok, msg ->
+                        result.success(mapOf(
+                            "success" to ok,
+                            "message" to msg
+                        ))
+                    }
+                }
+                "syncTelegramNow" -> {
+                    TelegramSender.syncPendingData(this) { sentTexts, sentPhotos, error ->
+                        result.success(mapOf(
+                            "sentTexts" to sentTexts,
+                            "sentPhotos" to sentPhotos,
+                            "error" to (error ?: "")
+                        ))
+                    }
+                }
+                "getDatabaseStats" -> {
+                    val counts = DbHelper(this).getCounts()
+                    result.success(mapOf(
+                        "textCount" to counts.first,
+                        "screenshotCount" to counts.second
+                    ))
+                }
                 else -> {
                     result.notImplemented()
                 }

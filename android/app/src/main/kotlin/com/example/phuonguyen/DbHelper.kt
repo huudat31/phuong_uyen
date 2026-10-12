@@ -9,12 +9,25 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+data class ScreenshotRecord(
+    val id: Long,
+    val filePath: String,
+    val timestamp: String
+)
+
+data class TextLogRecord(
+    val id: Long,
+    val packageName: String,
+    val content: String,
+    val timestamp: String
+)
+
 class DbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
 
     companion object {
         private const val TAG = "SelfMonitorDb"
         const val DATABASE_NAME = "self_monitor.db"
-        const val DATABASE_VERSION = 1
+        const val DATABASE_VERSION = 2
         const val TABLE_TEXT_LOGS = "text_logs"
         const val TABLE_SCREENSHOTS = "screenshots"
     }
@@ -29,6 +42,22 @@ class DbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null
     }
 
     override fun onCreate(db: SQLiteDatabase) {
+        createTables(db)
+        Log.d(TAG, "Created SQLite tables in $DATABASE_NAME")
+    }
+
+    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+        createTables(db)
+        Log.d(TAG, "Upgraded SQLite tables to version $newVersion")
+    }
+
+    override fun onOpen(db: SQLiteDatabase) {
+        super.onOpen(db)
+        // Luôn đảm bảo các bảng cần thiết tồn tại kể cả khi database đã được tạo trước đó
+        createTables(db)
+    }
+
+    private fun createTables(db: SQLiteDatabase) {
         db.execSQL(
             """
             CREATE TABLE IF NOT EXISTS $TABLE_TEXT_LOGS (
@@ -48,11 +77,6 @@ class DbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null
             )
             """.trimIndent()
         )
-        Log.d(TAG, "Created SQLite tables in $DATABASE_NAME")
-    }
-
-    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        // Upgrade logic if schema changes
     }
 
     @Synchronized
@@ -84,6 +108,121 @@ class DbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null
         } catch (e: Exception) {
             Log.e(TAG, "Error inserting screenshot", e)
         }
+    }
+
+    @Synchronized
+    fun getPendingScreenshots(limit: Int = 100): List<ScreenshotRecord> {
+        val list = mutableListOf<ScreenshotRecord>()
+        try {
+            val db = readableDatabase
+            val cursor = db.query(
+                TABLE_SCREENSHOTS,
+                arrayOf("id", "file_path", "timestamp"),
+                null,
+                null,
+                null,
+                null,
+                "id ASC",
+                limit.toString()
+            )
+            cursor.use {
+                val idIdx = it.getColumnIndexOrThrow("id")
+                val pathIdx = it.getColumnIndexOrThrow("file_path")
+                val timeIdx = it.getColumnIndexOrThrow("timestamp")
+                while (it.moveToNext()) {
+                    list.add(
+                        ScreenshotRecord(
+                            id = it.getLong(idIdx),
+                            filePath = it.getString(pathIdx),
+                            timestamp = it.getString(timeIdx)
+                        )
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error querying pending screenshots", e)
+        }
+        return list
+    }
+
+    @Synchronized
+    fun deleteScreenshot(id: Long) {
+        try {
+            val db = writableDatabase
+            db.delete(TABLE_SCREENSHOTS, "id = ?", arrayOf(id.toString()))
+            Log.d(TAG, "Deleted screenshot record [id=$id]")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error deleting screenshot id=$id", e)
+        }
+    }
+
+    @Synchronized
+    fun getPendingTextLogs(limit: Int = 200): List<TextLogRecord> {
+        val list = mutableListOf<TextLogRecord>()
+        try {
+            val db = readableDatabase
+            val cursor = db.query(
+                TABLE_TEXT_LOGS,
+                arrayOf("id", "package_name", "content", "timestamp"),
+                null,
+                null,
+                null,
+                null,
+                "id ASC",
+                limit.toString()
+            )
+            cursor.use {
+                val idIdx = it.getColumnIndexOrThrow("id")
+                val pkgIdx = it.getColumnIndexOrThrow("package_name")
+                val contentIdx = it.getColumnIndexOrThrow("content")
+                val timeIdx = it.getColumnIndexOrThrow("timestamp")
+                while (it.moveToNext()) {
+                    list.add(
+                        TextLogRecord(
+                            id = it.getLong(idIdx),
+                            packageName = it.getString(pkgIdx),
+                            content = it.getString(contentIdx),
+                            timestamp = it.getString(timeIdx)
+                        )
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error querying pending text logs", e)
+        }
+        return list
+    }
+
+    @Synchronized
+    fun deleteTextLogs(ids: List<Long>) {
+        if (ids.isEmpty()) return
+        try {
+            val db = writableDatabase
+            val placeholders = ids.joinToString(",") { "?" }
+            val args = ids.map { it.toString() }.toTypedArray()
+            db.delete(TABLE_TEXT_LOGS, "id IN ($placeholders)", args)
+            Log.d(TAG, "Deleted ${ids.size} text log records")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error deleting text logs", e)
+        }
+    }
+
+    @Synchronized
+    fun getCounts(): Pair<Int, Int> {
+        var textCount = 0
+        var screenshotCount = 0
+        try {
+            val db = readableDatabase
+            db.rawQuery("SELECT COUNT(*) FROM $TABLE_TEXT_LOGS", null).use {
+                if (it.moveToFirst()) textCount = it.getInt(0)
+            }
+            db.rawQuery("SELECT COUNT(*) FROM $TABLE_SCREENSHOTS", null).use {
+                if (it.moveToFirst()) screenshotCount = it.getInt(0)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting counts", e)
+        }
+        return Pair(textCount, screenshotCount)
     }
 
     private fun getCurrentIsoTimestamp(): String {

