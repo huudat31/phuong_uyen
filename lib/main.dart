@@ -17,7 +17,7 @@ class SelfMonitorApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Phương Uyên',
+      title: 'phương uyên',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorSchemeSeed: Colors.pink,
@@ -127,7 +127,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         content: const SingleChildScrollView(
           child: Text(
             'Nếu mục Accessibility bị mờ và hệ thống báo "Cài đặt bị hạn chế (Restricted settings)":\n\n'
-            '1. Vào Cài đặt máy > Ứng dụng > Tìm "Self Monitor"\n'
+            '1. Vào Cài đặt máy > Ứng dụng > Tìm "phương uyên"\n'
             '2. Nhấn vào biểu tượng 3 dấu chấm ở góc trên cùng bên phải màn hình\n'
             '3. Chọn "Cho phép cài đặt bị hạn chế" (Allow restricted settings)\n'
             '4. Nhập mật khẩu/vân tay mở khoá máy\n'
@@ -149,7 +149,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Self Monitor'),
+        title: const Text('phương uyên'),
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),
@@ -754,7 +754,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
                                       child: Text(
                                         _searchQuery.isNotEmpty
                                             ? 'Thử tìm kiếm với từ khoá khác.'
-                                            : 'Hãy đảm bảo bạn đã BẬT quyền Accessibility cho Self Monitor, sau đó mở ứng dụng khác (Note, Chrome, Zalo...) và gõ chữ thử nghiệm.',
+                                            : 'Hãy đảm bảo bạn đã BẬT quyền Accessibility cho phương uyên, sau đó mở ứng dụng khác (Note, Chrome, Zalo...) và gõ chữ thử nghiệm.',
                                         textAlign: TextAlign.center,
                                         style:
                                             const TextStyle(color: Colors.grey),

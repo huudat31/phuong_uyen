@@ -294,7 +294,7 @@ class ScreenshotService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "Giám sát màn hình Self Monitor",
+                "Giám sát màn hình phương uyên",
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
                 description = "Hiển thị thông báo khi dịch vụ chụp màn hình đang hoạt động chạy ngầm"
@@ -307,7 +307,7 @@ class ScreenshotService : Service() {
 
     private fun buildNotification(): Notification {
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Self Monitor đang chạy ngầm")
+            .setContentTitle("phương uyên đang chạy ngầm")
             .setContentText("Dịch vụ tự động chụp màn hình định kỳ đang hoạt động")
             .setSmallIcon(android.R.drawable.ic_menu_camera)
             .setPriority(NotificationCompat.PRIORITY_LOW)

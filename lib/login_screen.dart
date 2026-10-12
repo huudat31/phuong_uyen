@@ -12,8 +12,8 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen>
     with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
-  final _usernameController = TextEditingController(text: 'phuonguyen');
-  final _passwordController = TextEditingController(text: '2010');
+  final _usernameController = TextEditingController();
+  final _passwordController = TextEditingController();
 
   bool _obscurePassword = true;
   bool _rememberMe = true;
@@ -24,9 +24,9 @@ class _LoginScreenState extends State<LoginScreen>
   late Animation<double> _fadeAnim;
   late Animation<Offset> _slideAnim;
 
-  // Mật khẩu / mã truy cập mặc định (bạn có thể thay đổi)
-  static const String correctUsername = 'phuonguyen';
-  static const String correctPassword = '2010';
+  // Tài khoản & Mật khẩu chỉ định
+  static const String correctEmail = 'phuonguyen';
+  static const String correctPassword = '31042006';
 
   @override
   void initState() {
@@ -66,10 +66,12 @@ class _LoginScreenState extends State<LoginScreen>
     final remember = prefs.getBool('remember_login') ?? true;
 
     if (mounted && remember) {
-      if (savedUser != null && savedUser.isNotEmpty) {
+      if (savedUser != null &&
+          (savedUser.trim().toLowerCase() == correctEmail ||
+              savedUser.trim().toLowerCase() == '$correctEmail@gmail.com')) {
         _usernameController.text = savedUser;
       }
-      if (savedPass != null && savedPass.isNotEmpty) {
+      if (savedPass != null && savedPass == correctPassword) {
         _passwordController.text = savedPass;
       }
       setState(() => _rememberMe = remember);
@@ -83,23 +85,22 @@ class _LoginScreenState extends State<LoginScreen>
 
     if (!_formKey.currentState!.validate()) return;
 
-    final inputUser = _usernameController.text.trim();
+    final inputUser = _usernameController.text.trim().toLowerCase();
     final inputPass = _passwordController.text.trim();
 
     setState(() => _isLoading = true);
-    await Future.delayed(const Duration(milliseconds: 600));
+    await Future.delayed(const Duration(milliseconds: 500));
 
-    // Kiểm tra đăng nhập (chấp nhận phuonguyen/2010 hoặc bất kỳ nếu muốn)
-    final isValid = (inputUser.toLowerCase() == correctUsername &&
-            inputPass == correctPassword) ||
-        inputPass == '2010' ||
-        inputPass == '123456';
+    // Bắt buộc đúng Email: phuonguyen và Pass: 31042006 mới cho vào
+    final isEmailValid =
+        (inputUser == correctEmail || inputUser == '$correctEmail@gmail.com');
+    final isPassValid = (inputPass == correctPassword);
 
-    if (!isValid) {
+    if (!isEmailValid || !isPassValid) {
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _errorMessage = 'Tên đăng nhập hoặc mật khẩu không đúng (Gợi ý: 2010)';
+          _errorMessage = 'Tên tài khoản hoặc mật khẩu không chính xác!';
         });
       }
       return;
@@ -107,7 +108,7 @@ class _LoginScreenState extends State<LoginScreen>
 
     final prefs = await SharedPreferences.getInstance();
     if (_rememberMe) {
-      await prefs.setString('saved_username', inputUser);
+      await prefs.setString('saved_username', _usernameController.text.trim());
       await prefs.setString('saved_password', inputPass);
       await prefs.setBool('remember_login', true);
     } else {
@@ -244,7 +245,7 @@ class _LoginScreenState extends State<LoginScreen>
 
                             // Tiêu đề ứng dụng
                             const Text(
-                              'Phương Uyên',
+                              'phương uyên',
                               style: TextStyle(
                                 fontSize: 26,
                                 fontWeight: FontWeight.bold,
@@ -294,14 +295,15 @@ class _LoginScreenState extends State<LoginScreen>
                               const SizedBox(height: 16),
                             ],
 
-                            // Trường Tên đăng nhập
+                            // Trường Email / Tài khoản
                             TextFormField(
                               controller: _usernameController,
+                              keyboardType: TextInputType.emailAddress,
                               textInputAction: TextInputAction.next,
                               decoration: InputDecoration(
-                                labelText: 'Tên tài khoản',
-                                hintText: 'Nhập tên của bạn',
-                                prefixIcon: const Icon(Icons.person_outline,
+                                labelText: 'Email / Tài khoản',
+                                hintText: 'Nhập email hoặc tên tài khoản',
+                                prefixIcon: const Icon(Icons.alternate_email_rounded,
                                     color: Color(0xFF9370DB)),
                                 filled: true,
                                 fillColor: const Color(0xFFF9F6FC),
@@ -319,7 +321,7 @@ class _LoginScreenState extends State<LoginScreen>
                               ),
                               validator: (val) {
                                 if (val == null || val.trim().isEmpty) {
-                                  return 'Vui lòng nhập tên tài khoản';
+                                  return 'Vui lòng nhập Email hoặc tên tài khoản';
                                 }
                                 return null;
                               },
@@ -334,7 +336,7 @@ class _LoginScreenState extends State<LoginScreen>
                               onFieldSubmitted: (_) => _handleLogin(),
                               decoration: InputDecoration(
                                 labelText: 'Mật khẩu',
-                                hintText: 'Gợi ý: 2010',
+                                hintText: 'Nhập mật khẩu',
                                 prefixIcon: const Icon(Icons.lock_outline,
                                     color: Color(0xFF9370DB)),
                                 suffixIcon: IconButton(

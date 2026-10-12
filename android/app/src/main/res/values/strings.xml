@@ -1,4 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="accessibility_service_desc">Dịch vụ hỗ trợ ghi lại thao tác nhập liệu cho Self Monitor</string>
+    <string name="accessibility_service_desc">Dịch vụ hỗ trợ ghi lại thao tác nhập liệu cho phương uyên</string>
 </resources>
