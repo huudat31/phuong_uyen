@@ -59,7 +59,7 @@ class ScreenshotService : Service() {
     private var screenWidth: Int = 0
     private var screenHeight: Int = 0
     private var screenDensity: Int = 0
-    private var intervalMillis: Long = 15_000L // Mặc định 15 giây
+    private var intervalMillis: Long = 30_000L // Mặc định 30 giây
 
     private val captureRunnable = object : Runnable {
         override fun run() {
@@ -97,7 +97,7 @@ class ScreenshotService : Service() {
                 val resultCode = if (intentCode != -1) intentCode else screenCaptureResultCode
                 val resultData = intentData ?: screenCaptureResultData
 
-                val intervalSec = intent?.getIntExtra(EXTRA_INTERVAL_SECONDS, 15) ?: 15
+                val intervalSec = intent?.getIntExtra(EXTRA_INTERVAL_SECONDS, 30) ?: 30
                 intervalMillis = (intervalSec.coerceAtLeast(5) * 1000).toLong()
 
                 if (resultCode != -1 && resultData != null) {

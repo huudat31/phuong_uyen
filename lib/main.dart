@@ -41,7 +41,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _batteryOptIgnored = false;
   bool _telegramConfigured = false;
   bool _telegramEnabled = false;
-  int _intervalSeconds = 15;
+  int _intervalSeconds = 30;
   bool _checking = true;
 
   @override
@@ -391,7 +391,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                   DropdownMenuItem(
                                       value: 15, child: Text('15 giây (Nhanh)')),
                                   DropdownMenuItem(
-                                      value: 30, child: Text('30 giây')),
+                                      value: 30, child: Text('30 giây (Mặc định)')),
                                   DropdownMenuItem(
                                       value: 60, child: Text('60 giây')),
                                 ],

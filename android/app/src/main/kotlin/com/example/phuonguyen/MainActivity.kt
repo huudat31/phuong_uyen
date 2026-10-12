@@ -57,7 +57,7 @@ class MainActivity : FlutterActivity() {
                         result.error("NO_PERMISSION", "Chưa cấp quyền chụp màn hình MediaProjection", null)
                         return@setMethodCallHandler
                     }
-                    val intervalSeconds = call.argument<Int>("intervalSeconds") ?: 15
+                    val intervalSeconds = call.argument<Int>("intervalSeconds") ?: 30
                     val intent = Intent(this, ScreenshotService::class.java).apply {
                         action = ScreenshotService.ACTION_START
                         putExtra(ScreenshotService.EXTRA_RESULT_CODE, ScreenshotService.screenCaptureResultCode)

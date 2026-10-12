@@ -49,7 +49,7 @@ class MonitorService {
   }
 
   /// Bắt đầu Foreground Service chụp màn hình định kỳ.
-  static Future<void> startScreenshotService({int intervalSeconds = 15}) async {
+  static Future<void> startScreenshotService({int intervalSeconds = 30}) async {
     if (!isAndroid) return;
     try {
       await _channel.invokeMethod('startScreenshotService', {
