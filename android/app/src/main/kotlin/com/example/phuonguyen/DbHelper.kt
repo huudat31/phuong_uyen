@@ -16,6 +16,7 @@ class DbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null
         const val DATABASE_NAME = "self_monitor.db"
         const val DATABASE_VERSION = 1
         const val TABLE_TEXT_LOGS = "text_logs"
+        const val TABLE_SCREENSHOTS = "screenshots"
     }
 
     override fun onConfigure(db: SQLiteDatabase) {
@@ -34,6 +35,15 @@ class DbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 package_name TEXT,
                 content TEXT,
+                timestamp TEXT
+            )
+            """.trimIndent()
+        )
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS $TABLE_SCREENSHOTS (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                file_path TEXT,
                 timestamp TEXT
             )
             """.trimIndent()
@@ -58,6 +68,21 @@ class DbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null
             Log.d(TAG, "Inserted text_log [id=$id] pkg=$packageName, content=$content")
         } catch (e: Exception) {
             Log.e(TAG, "Error inserting text log", e)
+        }
+    }
+
+    @Synchronized
+    fun insertScreenshot(filePath: String) {
+        try {
+            val db = writableDatabase
+            val values = ContentValues().apply {
+                put("file_path", filePath)
+                put("timestamp", getCurrentIsoTimestamp())
+            }
+            val id = db.insert(TABLE_SCREENSHOTS, null, values)
+            Log.d(TAG, "Inserted screenshot [id=$id] path=$filePath")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error inserting screenshot", e)
         }
     }
 

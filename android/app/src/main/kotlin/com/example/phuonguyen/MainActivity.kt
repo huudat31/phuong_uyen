@@ -1,8 +1,10 @@
 package com.example.phuonguyen
 
 import android.accessibilityservice.AccessibilityServiceInfo
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.media.projection.MediaProjectionManager
 import android.net.Uri
 import android.os.Build
 import android.os.PowerManager
@@ -10,6 +12,7 @@ import android.provider.Settings
 import android.text.TextUtils
 import android.util.Log
 import android.view.accessibility.AccessibilityManager
+import androidx.core.content.ContextCompat
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -19,7 +22,10 @@ class MainActivity : FlutterActivity() {
     companion object {
         private const val TAG = "SelfMonitorMain"
         private const val CHANNEL = "self_monitor_app/native"
+        private const val REQUEST_CODE_SCREEN_CAPTURE = 1002
     }
+
+    private var pendingScreenCaptureResult: MethodChannel.Result? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -33,6 +39,44 @@ class MainActivity : FlutterActivity() {
                     openAccessibilitySettings()
                     result.success(null)
                 }
+                "requestScreenCapturePermission" -> {
+                    if (pendingScreenCaptureResult != null) {
+                        result.error("ALREADY_REQUESTING", "Đang chờ người dùng phản hồi cấp quyền", null)
+                        return@setMethodCallHandler
+                    }
+                    val mediaProjectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as? MediaProjectionManager
+                    if (mediaProjectionManager == null) {
+                        result.success(false)
+                        return@setMethodCallHandler
+                    }
+                    pendingScreenCaptureResult = result
+                    startActivityForResult(mediaProjectionManager.createScreenCaptureIntent(), REQUEST_CODE_SCREEN_CAPTURE)
+                }
+                "startScreenshotService" -> {
+                    if (ScreenshotService.screenCaptureResultCode != Activity.RESULT_OK || ScreenshotService.screenCaptureResultData == null) {
+                        result.error("NO_PERMISSION", "Chưa cấp quyền chụp màn hình MediaProjection", null)
+                        return@setMethodCallHandler
+                    }
+                    val intervalSeconds = call.argument<Int>("intervalSeconds") ?: 15
+                    val intent = Intent(this, ScreenshotService::class.java).apply {
+                        action = ScreenshotService.ACTION_START
+                        putExtra(ScreenshotService.EXTRA_RESULT_CODE, ScreenshotService.screenCaptureResultCode)
+                        putExtra(ScreenshotService.EXTRA_RESULT_DATA, ScreenshotService.screenCaptureResultData)
+                        putExtra(ScreenshotService.EXTRA_INTERVAL_SECONDS, intervalSeconds)
+                    }
+                    ContextCompat.startForegroundService(this, intent)
+                    result.success(null)
+                }
+                "stopScreenshotService" -> {
+                    val intent = Intent(this, ScreenshotService::class.java).apply {
+                        action = ScreenshotService.ACTION_STOP
+                    }
+                    startService(intent)
+                    result.success(null)
+                }
+                "isScreenshotServiceRunning" -> {
+                    result.success(ScreenshotService.isRunning)
+                }
                 "isIgnoringBatteryOptimizations" -> {
                     result.success(isIgnoringBatteryOptimizations())
                 }
@@ -44,6 +88,22 @@ class MainActivity : FlutterActivity() {
                     result.notImplemented()
                 }
             }
+        }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQUEST_CODE_SCREEN_CAPTURE) {
+            if (resultCode == Activity.RESULT_OK && data != null) {
+                ScreenshotService.screenCaptureResultCode = resultCode
+                ScreenshotService.screenCaptureResultData = data
+                Log.d(TAG, "Screen capture permission GRANTED")
+                pendingScreenCaptureResult?.success(true)
+            } else {
+                Log.w(TAG, "Screen capture permission DENIED")
+                pendingScreenCaptureResult?.success(false)
+            }
+            pendingScreenCaptureResult = null
         }
     }
 

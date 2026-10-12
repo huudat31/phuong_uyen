@@ -1,7 +1,7 @@
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
-/// Quản lý database SQLite local để lưu text log.
+/// Quản lý database SQLite local để lưu text log và metadata ảnh chụp màn hình.
 /// Toàn bộ dữ liệu chỉ nằm trên máy, không upload ra ngoài.
 class DbHelper {
   DbHelper._internal();
@@ -29,6 +29,13 @@ class DbHelper {
             timestamp TEXT
           )
         ''');
+        await db.execute('''
+          CREATE TABLE screenshots (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            file_path TEXT,
+            timestamp TEXT
+          )
+        ''');
       },
     );
   }
@@ -42,13 +49,27 @@ class DbHelper {
     });
   }
 
+  Future<void> insertScreenshot(String filePath) async {
+    final db = await database;
+    await db.insert('screenshots', {
+      'file_path': filePath,
+      'timestamp': DateTime.now().toIso8601String(),
+    });
+  }
+
   Future<List<Map<String, dynamic>>> getTextLogs() async {
     final db = await database;
     return db.query('text_logs', orderBy: 'id DESC', limit: 500);
   }
 
+  Future<List<Map<String, dynamic>>> getScreenshots() async {
+    final db = await database;
+    return db.query('screenshots', orderBy: 'id DESC', limit: 500);
+  }
+
   Future<void> clearAll() async {
     final db = await database;
     await db.delete('text_logs');
+    await db.delete('screenshots');
   }
 }

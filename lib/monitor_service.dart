@@ -3,8 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 /// Lớp giao tiếp với code native Android (Kotlin) qua Platform Channel.
-/// Toàn bộ logic AccessibilityService nằm ở phía native,
-/// Dart chỉ gọi lệnh kiểm tra và mở cài đặt.
+/// Toàn bộ logic AccessibilityService và MediaProjection nằm ở phía native,
+/// Dart chỉ gọi lệnh bật/tắt và hỏi trạng thái.
 class MonitorService {
   static const MethodChannel _channel =
       MethodChannel('self_monitor_app/native');
@@ -33,6 +33,49 @@ class MonitorService {
     try {
       await _channel.invokeMethod('openAccessibilitySettings');
     } catch (_) {}
+  }
+
+  /// Hỏi quyền chụp màn hình (MediaProjection). Sẽ hiện dialog hệ thống.
+  /// Trả về true nếu người dùng đồng ý.
+  static Future<bool> requestScreenCapturePermission() async {
+    if (!isAndroid) return false;
+    try {
+      final result =
+          await _channel.invokeMethod<bool>('requestScreenCapturePermission');
+      return result ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Bắt đầu Foreground Service chụp màn hình định kỳ.
+  static Future<void> startScreenshotService({int intervalSeconds = 15}) async {
+    if (!isAndroid) return;
+    try {
+      await _channel.invokeMethod('startScreenshotService', {
+        'intervalSeconds': intervalSeconds,
+      });
+    } catch (_) {}
+  }
+
+  /// Dừng Foreground Service chụp màn hình.
+  static Future<void> stopScreenshotService() async {
+    if (!isAndroid) return;
+    try {
+      await _channel.invokeMethod('stopScreenshotService');
+    } catch (_) {}
+  }
+
+  /// Kiểm tra xem Foreground Service chụp màn hình có đang chạy không.
+  static Future<bool> isScreenshotServiceRunning() async {
+    if (!isAndroid) return false;
+    try {
+      final result =
+          await _channel.invokeMethod<bool>('isScreenshotServiceRunning');
+      return result ?? false;
+    } catch (_) {
+      return false;
+    }
   }
 
   /// Kiểm tra xem app đã được miễn trừ tối ưu hoá pin (Battery Optimization) chưa.

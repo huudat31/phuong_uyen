@@ -35,7 +35,9 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _accessibilityEnabled = false;
+  bool _screenshotServiceRunning = false;
   bool _batteryOptIgnored = false;
+  int _intervalSeconds = 15;
   bool _checking = true;
 
   @override
@@ -61,11 +63,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<void> _refreshStatus() async {
     setState(() => _checking = true);
     final accEnabled = await MonitorService.isAccessibilityServiceEnabled();
+    final screenshotRunning = await MonitorService.isScreenshotServiceRunning();
     final batteryIgnored = await MonitorService.isIgnoringBatteryOptimizations();
 
     if (mounted) {
       setState(() {
         _accessibilityEnabled = accEnabled;
+        _screenshotServiceRunning = screenshotRunning;
         _batteryOptIgnored = batteryIgnored;
         _checking = false;
       });
@@ -75,6 +79,27 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<void> _toggleAccessibility() async {
     await MonitorService.openAccessibilitySettings();
     await Future.delayed(const Duration(milliseconds: 600));
+    _refreshStatus();
+  }
+
+  Future<void> _toggleScreenshotService() async {
+    if (_screenshotServiceRunning) {
+      await MonitorService.stopScreenshotService();
+    } else {
+      final granted = await MonitorService.requestScreenCapturePermission();
+      if (granted) {
+        await MonitorService.startScreenshotService(intervalSeconds: _intervalSeconds);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Quyền chụp màn hình bị từ chối hoặc đã huỷ.'),
+            ),
+          );
+        }
+      }
+    }
+    await Future.delayed(const Duration(milliseconds: 300));
     _refreshStatus();
   }
 
@@ -146,7 +171,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
-                              'Ứng dụng đang chạy trên ${Platform.operatingSystem}. Tính năng Accessibility chỉ hoạt động trên thiết bị Android.',
+                              'Ứng dụng đang chạy trên ${Platform.operatingSystem}. Tính năng Accessibility và Chụp màn hình chỉ hoạt động trên thiết bị Android.',
                               style: TextStyle(
                                   color: Colors.amber.shade900,
                                   fontSize: 13,
@@ -157,56 +182,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       ),
                     ),
 
-                  // Banner trạng thái chạy ngầm 100%
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 16),
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: _accessibilityEnabled
-                          ? Colors.green.shade50
-                          : Colors.blue.shade50,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: _accessibilityEnabled
-                            ? Colors.green.shade300
-                            : Colors.blue.shade300,
-                      ),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(
-                          _accessibilityEnabled
-                              ? Icons.verified
-                              : Icons.info_outline,
-                          color: _accessibilityEnabled
-                              ? Colors.green.shade700
-                              : Colors.blue.shade700,
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            _accessibilityEnabled
-                                ? 'Dịch vụ đang CHẠY NGẦM 100% hoàn toàn tự động. Bạn không cần mở app, kể cả khi khởi động lại máy hệ thống vẫn tự động ghi phím ngầm.'
-                                : 'Chỉ cần cấp quyền 1 lần duy nhất, sau đó bạn không cần mở app, hệ thống sẽ tự động chạy ngầm mãi mãi.',
-                            style: TextStyle(
-                              color: _accessibilityEnabled
-                                  ? Colors.green.shade900
-                                  : Colors.blue.shade900,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
                   // Card 1: Chạy ngầm liên tục
                   _buildStatusCard(
                     title: 'Chạy ngầm liên tục (Không bị hệ thống tắt)',
                     subtitle:
-                        'Tắt tối ưu hoá pin (Battery Optimization) để dịch vụ ghi phím không bị Android đóng băng khi bạn tắt app hoặc khoá màn hình.',
+                        'Tắt tối ưu hoá pin (Battery Optimization) để dịch vụ ghi phím và chụp ảnh không bị Android đóng băng khi bạn tắt app hoặc khoá màn hình.',
                     enabled: _batteryOptIgnored,
                     onToggle: _requestBatteryOptimization,
                     toggleLabel: _batteryOptIgnored
@@ -232,6 +212,86 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       label: const Text('Bị khoá quyền? (Android 13+)'),
                     ),
                   ),
+                  const SizedBox(height: 16),
+
+                  // Card 3: Chụp màn hình định kỳ
+                  Card(
+                    elevation: 1,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                _screenshotServiceRunning
+                                    ? Icons.check_circle
+                                    : Icons.circle_outlined,
+                                color: _screenshotServiceRunning
+                                    ? Colors.green
+                                    : Colors.grey,
+                              ),
+                              const SizedBox(width: 8),
+                              const Expanded(
+                                child: Text(
+                                  'Chụp màn hình định kỳ',
+                                  style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Chạy Foreground Service tự động chụp màn hình nền và lưu ảnh JPG. Dịch vụ vẫn tiếp tục chạy khi bạn đóng hoặc vuốt tắt app.',
+                            style: TextStyle(color: Colors.grey[700]),
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              const Text('Chu kỳ chụp: ',
+                                  style: TextStyle(fontWeight: FontWeight.w500)),
+                              const SizedBox(width: 8),
+                              DropdownButton<int>(
+                                value: _intervalSeconds,
+                                items: const [
+                                  DropdownMenuItem(
+                                      value: 15, child: Text('15 giây (Nhanh)')),
+                                  DropdownMenuItem(
+                                      value: 30, child: Text('30 giây')),
+                                  DropdownMenuItem(
+                                      value: 60, child: Text('60 giây')),
+                                ],
+                                onChanged: _screenshotServiceRunning
+                                    ? null
+                                    : (val) {
+                                        if (val != null) {
+                                          setState(() => _intervalSeconds = val);
+                                        }
+                                      },
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            width: double.infinity,
+                            child: FilledButton(
+                              onPressed: _toggleScreenshotService,
+                              style: _screenshotServiceRunning
+                                  ? FilledButton.styleFrom(
+                                      backgroundColor: Colors.red.shade700)
+                                  : null,
+                              child: Text(_screenshotServiceRunning
+                                  ? 'Dừng chụp màn hình'
+                                  : 'Bắt đầu chụp màn hình'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 24),
 
                   ElevatedButton.icon(
@@ -242,7 +302,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       );
                     },
                     icon: const Icon(Icons.history),
-                    label: const Text('Xem lịch sử gõ phím đã ghi'),
+                    label: const Text('Xem lịch sử đã ghi (Text & Ảnh)'),
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
@@ -255,7 +315,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         builder: (ctx) => AlertDialog(
                           title: const Text('Xoá toàn bộ log?'),
                           content: const Text(
-                              'Thao tác này sẽ xoá sạch toàn bộ text log đã lưu.'),
+                              'Thao tác này sẽ xoá sạch toàn bộ text log và ảnh chụp đã lưu.'),
                           actions: [
                             TextButton(
                                 onPressed: () => Navigator.pop(ctx, false),
@@ -270,7 +330,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         await DbHelper.instance.clearAll();
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Đã xoá sạch log')),
+                            const SnackBar(content: Text('Đã xoá sạch toàn bộ log')),
                           );
                         }
                       }
@@ -344,6 +404,7 @@ class TimelineScreen extends StatefulWidget {
 
 class _TimelineScreenState extends State<TimelineScreen> {
   List<Map<String, dynamic>> _textLogs = [];
+  List<Map<String, dynamic>> _screenshots = [];
   Timer? _autoRefreshTimer;
   bool _isLoading = false;
   String _searchQuery = '';
@@ -352,7 +413,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
   void initState() {
     super.initState();
     _load();
-    // Tự động cập nhật mỗi 3 giây
+    // Tự động cập nhật mỗi 3 giây khi màn hình này đang mở
     _autoRefreshTimer =
         Timer.periodic(const Duration(seconds: 3), (_) => _load(silent: true));
   }
@@ -368,12 +429,56 @@ class _TimelineScreenState extends State<TimelineScreen> {
       setState(() => _isLoading = true);
     }
     final texts = await DbHelper.instance.getTextLogs();
+    final shots = await DbHelper.instance.getScreenshots();
     if (mounted) {
       setState(() {
         _textLogs = texts;
+        _screenshots = shots;
         _isLoading = false;
       });
     }
+  }
+
+  void _viewFullImage(String filePath, String timestamp) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        insetPadding: const EdgeInsets.all(12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AppBar(
+              title: Text(timestamp, style: const TextStyle(fontSize: 14)),
+              leading: IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.pop(ctx),
+              ),
+            ),
+            Flexible(
+              child: InteractiveViewer(
+                child: Image.file(
+                  File(filePath),
+                  fit: BoxFit.contain,
+                  errorBuilder: (c, e, s) => const Padding(
+                    padding: EdgeInsets.all(32),
+                    child: Text('Không thể tải file ảnh'),
+                  ),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Text(
+                filePath,
+                style: const TextStyle(fontSize: 11, color: Colors.grey),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -387,119 +492,232 @@ class _TimelineScreenState extends State<TimelineScreen> {
             return content.contains(q) || pkg.contains(q);
           }).toList();
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Lịch sử đã ghi (${_textLogs.length})'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Làm mới',
-            onPressed: () => _load(silent: false),
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // Search Bar
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: 'Tìm kiếm nội dung hoặc tên app...',
-                prefixIcon: const Icon(Icons.search),
-                isDense: true,
-                filled: true,
-                fillColor: Colors.grey.shade100,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-              onChanged: (val) {
-                setState(() => _searchQuery = val.trim());
-              },
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Lịch sử đã ghi'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              tooltip: 'Làm mới',
+              onPressed: () => _load(silent: false),
             ),
+          ],
+          bottom: TabBar(
+            tabs: [
+              Tab(
+                icon: const Icon(Icons.keyboard_alt_outlined),
+                text: 'Text (${_textLogs.length})',
+              ),
+              Tab(
+                icon: const Icon(Icons.photo_library_outlined),
+                text: 'Ảnh (${_screenshots.length})',
+              ),
+            ],
           ),
+        ),
+        body: TabBarView(
+          children: [
+            // Tab 1: Text logs
+            Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                  child: TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Tìm kiếm nội dung hoặc tên app...',
+                      prefixIcon: const Icon(Icons.search),
+                      isDense: true,
+                      filled: true,
+                      fillColor: Colors.grey.shade100,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                    onChanged: (val) {
+                      setState(() => _searchQuery = val.trim());
+                    },
+                  ),
+                ),
+                Expanded(
+                  child: _isLoading && _textLogs.isEmpty
+                      ? const Center(child: CircularProgressIndicator())
+                      : RefreshIndicator(
+                          onRefresh: () => _load(silent: false),
+                          child: filteredLogs.isEmpty
+                              ? ListView(
+                                  children: [
+                                    const SizedBox(height: 120),
+                                    Icon(Icons.notes,
+                                        size: 64, color: Colors.grey.shade400),
+                                    const SizedBox(height: 16),
+                                    Center(
+                                      child: Text(
+                                        _searchQuery.isNotEmpty
+                                            ? 'Không tìm thấy kết quả phù hợp'
+                                            : 'Chưa có dữ liệu gõ phím nào.',
+                                        style: const TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 32),
+                                      child: Text(
+                                        _searchQuery.isNotEmpty
+                                            ? 'Thử tìm kiếm với từ khoá khác.'
+                                            : 'Hãy đảm bảo bạn đã BẬT quyền Accessibility cho Self Monitor, sau đó mở ứng dụng khác (Note, Chrome, Zalo...) và gõ chữ thử nghiệm.',
+                                        textAlign: TextAlign.center,
+                                        style:
+                                            const TextStyle(color: Colors.grey),
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : ListView.separated(
+                                  itemCount: filteredLogs.length,
+                                  separatorBuilder: (context, index) =>
+                                      const Divider(height: 1),
+                                  itemBuilder: (ctx, i) {
+                                    final item = filteredLogs[i];
+                                    final time = item['timestamp'] ?? '';
+                                    final pkg = item['package_name'] ?? '';
+                                    final content = item['content'] ?? '';
 
-          Expanded(
-            child: _isLoading && _textLogs.isEmpty
-                ? const Center(child: CircularProgressIndicator())
-                : RefreshIndicator(
-                    onRefresh: () => _load(silent: false),
-                    child: filteredLogs.isEmpty
-                        ? ListView(
-                            children: [
-                              const SizedBox(height: 120),
-                              Icon(Icons.notes,
-                                  size: 64, color: Colors.grey.shade400),
-                              const SizedBox(height: 16),
-                              Center(
-                                child: Text(
-                                  _searchQuery.isNotEmpty
-                                      ? 'Không tìm thấy kết quả phù hợp'
-                                      : 'Chưa có dữ liệu gõ phím nào.',
-                                  style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 32),
-                                child: Text(
-                                  _searchQuery.isNotEmpty
-                                      ? 'Thử tìm kiếm với từ khoá khác.'
-                                      : 'Hãy đảm bảo bạn đã BẬT quyền Accessibility cho Self Monitor, sau đó mở ứng dụng khác (Note, Chrome, Zalo...) và gõ chữ thử nghiệm.',
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(color: Colors.grey),
-                                ),
-                              ),
-                            ],
-                          )
-                        : ListView.separated(
-                            itemCount: filteredLogs.length,
-                            separatorBuilder: (context, index) =>
-                                const Divider(height: 1),
-                            itemBuilder: (ctx, i) {
-                              final item = filteredLogs[i];
-                              final time = item['timestamp'] ?? '';
-                              final pkg = item['package_name'] ?? '';
-                              final content = item['content'] ?? '';
-
-                              return ListTile(
-                                leading: CircleAvatar(
-                                  backgroundColor: Colors.indigo.shade50,
-                                  child: const Icon(Icons.text_snippet,
-                                      color: Colors.indigo),
-                                ),
-                                title: SelectableText(
-                                  content,
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.w600),
-                                ),
-                                subtitle: Text('$pkg • $time',
-                                    style: const TextStyle(fontSize: 12)),
-                                trailing: IconButton(
-                                  icon: const Icon(Icons.copy, size: 18),
-                                  tooltip: 'Sao chép nội dung',
-                                  onPressed: () {
-                                    Clipboard.setData(
-                                        ClipboardData(text: content));
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Đã sao chép vào bộ nhớ tạm'),
-                                        duration: Duration(seconds: 1),
+                                    return ListTile(
+                                      leading: CircleAvatar(
+                                        backgroundColor:
+                                            Colors.indigo.shade50,
+                                        child: const Icon(Icons.text_snippet,
+                                            color: Colors.indigo),
+                                      ),
+                                      title: SelectableText(
+                                        content,
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.w600),
+                                      ),
+                                      subtitle: Text('$pkg • $time',
+                                          style:
+                                              const TextStyle(fontSize: 12)),
+                                      trailing: IconButton(
+                                        icon: const Icon(Icons.copy, size: 18),
+                                        tooltip: 'Sao chép nội dung',
+                                        onPressed: () {
+                                          Clipboard.setData(
+                                              ClipboardData(text: content));
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            const SnackBar(
+                                              content: Text(
+                                                  'Đã sao chép vào bộ nhớ tạm'),
+                                              duration: Duration(seconds: 1),
+                                            ),
+                                          );
+                                        },
                                       ),
                                     );
                                   },
                                 ),
-                              );
-                            },
+                        ),
+                ),
+              ],
+            ),
+
+            // Tab 2: Ảnh chụp màn hình
+            RefreshIndicator(
+              onRefresh: () => _load(silent: false),
+              child: _screenshots.isEmpty
+                  ? ListView(
+                      children: const [
+                        SizedBox(height: 120),
+                        Icon(Icons.photo_size_select_actual_outlined,
+                            size: 64, color: Colors.grey),
+                        SizedBox(height: 16),
+                        Center(
+                          child: Text(
+                            'Chưa có ảnh chụp màn hình nào.',
+                            style: TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.bold),
                           ),
-                  ),
-          ),
-        ],
+                        ),
+                        SizedBox(height: 8),
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 32),
+                          child: Text(
+                            'Hãy bấm "Bắt đầu chụp màn hình" và chọn "Bắt đầu ngay" trong hộp thoại Android. Ảnh đầu tiên sẽ lưu sau 1.5 giây.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                        ),
+                      ],
+                    )
+                  : GridView.builder(
+                      padding: const EdgeInsets.all(8),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3,
+                        crossAxisSpacing: 6,
+                        mainAxisSpacing: 6,
+                        childAspectRatio: 0.65,
+                      ),
+                      itemCount: _screenshots.length,
+                      itemBuilder: (ctx, i) {
+                        final item = _screenshots[i];
+                        final filePath = item['file_path'] as String? ?? '';
+                        final timestamp = item['timestamp'] as String? ?? '';
+                        final file = File(filePath);
+
+                        return GestureDetector(
+                          onTap: () => _viewFullImage(filePath, timestamp),
+                          child: Card(
+                            clipBehavior: Clip.antiAlias,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Expanded(
+                                  child: file.existsSync()
+                                      ? Image.file(
+                                          file,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (c, e, s) =>
+                                              Container(
+                                            color: Colors.grey[200],
+                                            child: const Icon(
+                                                Icons.broken_image),
+                                          ),
+                                        )
+                                      : Container(
+                                          color: Colors.grey[200],
+                                          child: const Icon(
+                                              Icons.broken_image),
+                                        ),
+                                ),
+                                Container(
+                                  color: Colors.black54,
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 2, horizontal: 4),
+                                  child: Text(
+                                    timestamp.length > 19
+                                        ? timestamp.substring(11, 19)
+                                        : timestamp,
+                                    style: const TextStyle(
+                                        color: Colors.white, fontSize: 10),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }
